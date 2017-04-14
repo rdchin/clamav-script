@@ -1,13 +1,51 @@
 #!/bin/bash
-VERSION="2016-01-27 19:36"
+VERSION="2017-04-14 13:32"
 #
 #@ Code Change History
 #@
-#@ 2017-01-27 - *Main Program added check for clamav installed.
-#@               Added option to update virus definitons via freshclam.
+#@ 2017-04-14 - *Main Program added option to update virus definitions
+#@              via freshclam.
+#@ 2017-02-09 - *f_show_only_infected, f_show_all improved readabilty of 
+#@               display of command and options.
+#@ 2017-02-08 - *Main Program checked if $FILE_VIEWER application is
+#@               installed by using "test" instead of "eval" command.
 #@ 2017-01-25 - *Improved messages added start/end times.
-#@ 2017-01-23 - *Rewrote script to include option to show all/only infected files.
-#@ 2016-09-06 - *Added list of infected files and errors at end of $LOG_FILE.
+#@ 2017-01-23 - *Rewrote script added option to show all/only infected
+#@               files.
+#@ 2016-09-06 - *Added list of infected files and errors at end of
+#@               $LOG_FILE.
+#
+#
+# +----------------------------------------+
+# |   Function f_update_virus_definitions  |
+# +----------------------------------------+
+#
+#  Inputs: None.
+#          None.
+#    Uses: X.
+# Outputs: None.
+#
+f_update_virus_definitions () {
+clamscan --version  # Display on-screen the version of clamav.
+echo -n "Before scanning for viruses, do you want to update the virus definitions? (Y/n/quit): " ; read X
+case $X in
+     [Nn] | [Nn][Oo])
+     ;;
+     [Qq] | [Qq][Uu] | [Qq][Uu][Ii] | [Qq][Uu][Ii][Tt]) f_abort_txt
+     ;;
+     *) echo ; echo
+        sudo freshclam
+        ERROR=$?
+        if [ $ERROR -ne 0 ] ; then
+           echo -n $(tput setaf 1)
+           echo -n $(tput bold)
+           echo "Error: Failed to update virus definitions."
+           f_abort_txt
+        fi
+     ;;
+esac
+unset X
+}  # End of function f_update_virus_definitions
 #
 # +----------------------------------------+
 # |      Function f_show_only_infected     |
@@ -24,6 +62,7 @@ f_show_only_infected () {
        OPTIONS=$(echo $1 | tr '_' ' ')
        #
        echo "Command: sudo clamscan $OPTIONS --log=$LOG_FILE $2"
+       echo
        echo "              OPTIONS: -r Recursive to sub-directories."
        echo "                       -v Verbose reporting."
        echo "                       -i Only print infected files." 
@@ -37,7 +76,6 @@ f_show_only_infected () {
        sudo clamscan $OPTIONS --log="$LOG_FILE" $2
        echo >>$LOG_FILE
        echo >>$LOG_FILE
-       clamscan --version >>$LOG_FILE
        echo "------------------------------------------------------------------------------" >>$LOG_FILE
        echo "Scan directory: $2" >>$LOG_FILE
        echo "Started on: $START_TIME" >>$LOG_FILE
@@ -63,6 +101,7 @@ f_show_all () {
        OPTIONS=$(echo $1 | tr '_' ' ')
        #
        echo "Command: sudo clamscan $OPTIONS --log=$LOG_FILE $2"
+       echo
        echo "              OPTIONS: -r Recursive to sub-directories."
        echo "                       -v Verbose reporting."
        echo "                       -i Only print infected files." 
@@ -76,7 +115,6 @@ f_show_all () {
        sudo clamscan $OPTIONS --log="$LOG_FILE" $2
        echo >>$LOG_FILE
        echo >>$LOG_FILE
-       clamscan --version >>$LOG_FILE
        echo "------------------------------------------------------------------------------" >>$LOG_FILE
        echo "Scan directory: $2" >>$LOG_FILE
        echo "Started on: $START_TIME" >>$LOG_FILE
@@ -122,35 +160,6 @@ f_abort_txt() {
 # |           Start of Main Program        |
 # +----------------------------------------+
 #
-# Does clamav log directory exist?
-if [ ! -d "/var/log/clamav" ] ; then  # If directory does not exist...
-   echo -n $(tput setaf 1)
-   echo -n $(tput bold)
-   echo "Error: The directory /var/log/clamav does not exist."
-   echo "Is clamav installed properly?"
-   f_abort_txt
-fi
-#
-clamscan --version  # Display on-screen the version of clamav.
-echo -n "Before scanning for viruses, do you want to update the virus definitions? (Y/n/quit): " ; read X
-case $X in
-     [Nn] | [Nn][Oo])
-     ;;
-     [Qq] | [Qq][Uu] | [Qq][Uu][Ii] | [Qq][Uu][Ii][Tt]) f_abort_txt
-     ;;
-     *) echo ; echo
-        sudo freshclam
-        ERROR=$?
-        if [ $ERROR -ne 0 ] ; then
-           echo -n $(tput setaf 1)
-           echo -n $(tput bold)
-           echo "Error: Failed to update virus definitions."
-           f_abort_txt
-        fi
-     ;;
-esac
-echo
-echo
 echo "Clam anti-virus scanning script: virusscan_clamav.sh $VERSION"
 echo
 echo "Usage: sudo bash viruscan_clamav.sh <DIRECTORY TO BE SCANNED>"
@@ -163,8 +172,13 @@ if [ -n "$SCAN_DIR" ] && [ -d "$SCAN_DIR" ] ; then  # If $SCAN_DIR is non-null a
    LOG_FILE="/var/log/clamav/$(date +%Y%m%d-%H%M)_clamscan_report.log"
    LOG_FILE_TMP="/var/log/clamav/list_infected_files.tmp"
    echo "Log file is $LOG_FILE."
+   echo
+   # Update ClamAV Virus Definitions.
+   f_update_virus_definitions
+   echo
    echo "Scan directory: $SCAN_DIR started on: ">>$LOG_FILE ; date>>$LOG_FILE
    ERROR=$?  # Was "sudo" included in command "sudo bash virusscan_clamav.sh <DIRECTORY>"?
+             # (Needed for /var/log/clamav access).
    if [ $ERROR -eq 0 ] ; then
       echo
       echo
@@ -175,39 +189,39 @@ if [ -n "$SCAN_DIR" ] && [ -d "$SCAN_DIR" ] ; then  # If $SCAN_DIR is non-null a
            [Qq] | [Qq][Uu] | [Qq][Uu][Ii] | [Qq][Uu][Ii][Tt]) f_abort_txt
            ;;
            *) OPTIONS="-r"
-           ;;
+           ;;  
       esac
       echo -n "Show only infected files? (Y/n/quit): " ; read X
       echo
       case $X in
            [Nn] | [Nn][Oo]) 
-	   # echo "OPTIONS=$OPTIONS"  # Diagnostic line.
-	   f_show_all $OPTIONS $SCAN_DIR
-	   ;;
+	       # echo "OPTIONS=$OPTIONS"  # Diagnostic line.
+	       f_show_all $OPTIONS $SCAN_DIR
+	       ;;
            [Qq] | [Qq][Uu] | [Qq][Uu][Ii] | [Qq][Uu][Ii][Tt])
            f_abort_txt
-	   ;;
+	       ;;
            *) 
-	   OPTIONS=$OPTIONS"_-i" 
-	   # echo "OPTIONS=$OPTIONS"  # Diagnostic line.
-	   f_show_only_infected $OPTIONS $SCAN_DIR 
-	   ;;
+	       OPTIONS=$OPTIONS"_-i_-v" 
+	       # echo "OPTIONS=$OPTIONS"  # Diagnostic line.
+	       f_show_only_infected $OPTIONS $SCAN_DIR 
+	       ;;
       esac
       echo
       echo -n "Look at log file? (Y/n/quit): " ; read X
       case $X in
-           [Nn] | [Nn][Oo])
-	   ;;
+           [Nn] | [Nn][Oo]) 
+	       ;;
            [Qq] | [Qq][Uu] | [Qq][Uu][Ii] | [Qq][Uu][Ii][Tt])
            f_abort_txt
-	   ;;
+	       ;;
            *)
            # Detect installed file viewer/pager.
            RUNAPP=0
            for FILE_VIEWER in most more less
            do
                if [ $RUNAPP -eq 0 ] ; then
-                  eval $FILE_VIEWER
+                  type $FILE_VIEWER >/dev/null 2>&1  # Test if $FILE_VIEWER application is installed.
                   ERROR=$?
                   if [ $ERROR -eq 0 ] ; then
                      eval $FILE_VIEWER $LOG_FILE
@@ -215,7 +229,7 @@ if [ -n "$SCAN_DIR" ] && [ -d "$SCAN_DIR" ] ; then  # If $SCAN_DIR is non-null a
                   fi
                fi
            done
-	   ;;
+	       ;;
       esac
    else
       echo -n $(tput setaf 1)
