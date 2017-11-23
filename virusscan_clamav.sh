@@ -8,6 +8,21 @@ VERSION="2017-08-05 18:22"
 #@              *Main Program added f_abort_txt message if ended with errors.
 #@              *f_show_common created to reduce duplicated code.
 #@
+#@ 2017-05-10 *Main Program added option to update virus definitons
+#@             via freshclam.
+#@            *Main Program added detection of valid arguments.
+#@            *f_arguments added to detect valid arguments "--version",
+#@             "--about", and "--history".
+#@            *f_help_message_txt added to allow the argument "--help"
+#@             to invoke a help message.
+#@            *f_script_path added.
+#@
+#@ 2017-02-09 *f_show_only_infected_txt, f_show_all_txt improved readabilty of
+#@             display of command and options.
+#@
+#@ 2017-02-08 *Main Program checked if $FILE_VIEWER application is
+#@             installed by using "test" instead of "eval" command.
+#@
 #@ 2017-01-27 - *Main Program added check for clamav installed.
 #@               Added option to update virus definitons via freshclam.
 #@
